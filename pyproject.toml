@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "libsynomail"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Antonio Alonso <alloant@gmail.com>"]
 readme = "README.md"
