@@ -17,9 +17,9 @@ from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Font
 
 
-from synomail.get_mail import create_despacho
-from synomail import CONFIG, EXT, INV_EXT
-import synomail.connection as con
+from libsynomail.get_mail import create_despacho
+from libsynomail import CONFIG, EXT, INV_EXT
+import libsynomail.connection as con
 
 TITLES = ['type','source','No','Year','Ref','Date','Content','Dept','Name','Original','Comments'] 
 

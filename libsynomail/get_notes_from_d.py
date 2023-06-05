@@ -10,8 +10,8 @@ import logging
 
 from openpyxl import Workbook
 
-from synomail import CONFIG, EXT
-import synomail.connection as con
+from libsynomail import CONFIG, EXT
+import libsynomail.connection as con
 
 def get_notes_in_folders():
     team_folders = con.nas.get_team_folders()

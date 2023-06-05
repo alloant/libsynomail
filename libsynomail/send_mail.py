@@ -2,8 +2,8 @@
 
 import logging
 
-from synomail import CONFIG, GROUPS, EXT
-import synomail.connection as con
+from libsynomail import CONFIG, GROUPS, EXT
+import libsynomail.connection as con
 
 
 def change_names():

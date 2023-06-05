@@ -12,8 +12,8 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment
 
-from synomail import CONFIG, EXT, DEBUG
-import synomail.connection as con
+from libsynomail import CONFIG, EXT, DEBUG
+import libsynomail.connection as con
 
 def folder_in_teams(folder,teams):
     fds = folder.split("/")[1:]

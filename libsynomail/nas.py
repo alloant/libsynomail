@@ -8,7 +8,7 @@ import time
 import logging
 from pathlib import Path
 
-from synomail import CONFIG, EXT, INV_EXT
+from libsynomail import CONFIG, EXT, INV_EXT
 
 class prome:
     def __init__(self,PASS=None):

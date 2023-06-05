@@ -1,4 +1,4 @@
-from synomail.nas import prome
+from libsynomail.nas import prome
 
 def init_nas(PASS):
     global nas
