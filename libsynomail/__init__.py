@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-#from PySide6.QtCore import QSettings
-
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -34,4 +32,5 @@ if 'DEBUG' in CONFIG:
     DEBUG = CONFIG['DEBUG']
 else:
     DEBUG = False
+
 
