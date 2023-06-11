@@ -8,15 +8,16 @@ import time
 import logging
 from pathlib import Path
 
-from libsynomail import CONFIG, EXT, INV_EXT
+from libsynomail import EXT, INV_EXT
 
 class prome:
-    def __init__(self,PASS=None):
+    def __init__(self,user,PASS):
+        self.user = user
         self.PASS = PASS
 
     def get_team_folders(self):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
                 return synd.get_teamfolder_info()
             return None
         except Exception as err:
@@ -25,7 +26,7 @@ class prome:
 
     def get_file_list(self,folder):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
                 return synd.list_folder(folder)['data']['items']
             return None
         except Exception as err:
@@ -35,7 +36,7 @@ class prome:
 
     def change_name(self,file,new_name):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
                 synd.rename_path(new_name,file)
                 return True
         except Exception as err:
@@ -47,7 +48,7 @@ class prome:
 
     def move(self,path,new_path):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
                 logging.debug(f'Sending synology command to move {path}')
                 rst = synd.move_path(path,new_path)
                 logging.debug('Command to move sent')
@@ -76,7 +77,7 @@ class prome:
 
     def copy(self,path,dest):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
                 ext = Path(path).suffix[1:]
                 if ext in INV_EXT:
                     synd.copy(path,dest)
@@ -88,27 +89,28 @@ class prome:
             logging.error(f"Cannot copy file {path} to {dest}")
 
 
-    def convert_office(self,file_path,delete = False):
-        logging.debug(f"Converting {file_path}...")        
+    def convert_office(self,file_id,delete = False):
+        logging.debug(f"Converting {file_id}...")        
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:
-                rst = synd.convert_to_online_office(file_path,delete_original_file=delete)
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+                rst = synd.convert_to_online_office(file_id,delete_original_file=delete)
                 task_id = rst['data']['async_task_id']
-    
+                
                 rst = synd.get_task_status(task_id)
                 while(not rst['data']['has_fail'] and rst['data']['result'][0]['data']['status'] == 'in_progress'):
                     time.sleep(1)
                     rst = synd.get_task_status(task_id)
                 
+                file_path = synd.get_file_or_folder_info(file_id)['data']['display_path'] 
                 ext = Path(file_path).suffix[1:]
                 name = file_path.replace(ext,EXT[ext])
     
                 new_file = synd.get_file_or_folder_info(name)
-                file_id = new_file['data']['file_id']
-                permanent_link = new_file['data']['permanent_link']
-                file_path = new_file['data']['display_path'] 
+                new_file_id = new_file['data']['file_id']
+                new_permanent_link = new_file['data']['permanent_link']
+                new_file_path = new_file['data']['display_path']
 
-                return file_path,file_id,permanent_link
+                return Path(name).name,new_file_path,new_file_id,new_permanent_link
 
         except Exception as err:
             logging.error(err)
@@ -116,11 +118,14 @@ class prome:
             return '','',''
 
 
-    def download_file(self,file_path,dest=None):
+    def download_file(self,file_path,dest=None,file_name = None):
         logging.debug(f"Downloading {file_path}")
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd:                
-                ext = Path(file_path).suffix[1:]
+            if not file_name:
+                file_name = file_path
+
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:                
+                ext = Path(file_name).suffix[1:]
                 if ext in INV_EXT:
                     ext = INV_EXT[ext]
                     bio = synd.download_synology_office_file(file_path)
@@ -128,7 +133,7 @@ class prome:
                     bio = synd.download_file(file_path)
                 
                 if dest:
-                    file_name = Path(file_path).stem
+                    file_name = Path(file_name).stem
         
                     with open(f'{dest}/{file_name}.{ext}','wb') as f:
                         f.write(bio.read())
@@ -136,14 +141,13 @@ class prome:
                     return bio
         
         except Exception as err:
-            raise
             logging.error(err)
             logging.error(f"Cannot download {file_path}")
 
 
     def upload_file(self,file,dest):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
                 logging.debug(f"Uploading {file.name}")
                 ret_upload = synd.upload_file(file, dest_folder_path=dest)
         except Exception as err:
@@ -153,7 +157,7 @@ class prome:
 
     def upload_convert_wb(self,wb,name,dest):
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
                 file = NamedTemporaryFile()
                 wb.save(file)
                 file.seek(0)
@@ -170,8 +174,8 @@ class prome:
 
         if uploaded:
             try:
-                file_path,file_id,permanent_link = self.convert_office(ret_upload['data']['display_path'],delete=False)
-                #with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
+                file_name,file_path,file_id,permanent_link = self.convert_office(ret_upload['data']['display_path'],delete=False)
+                #with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
                 #    ret_convert = synd.convert_to_online_office(ret_upload['data']['display_path'],
                 #    delete_original_file=False,
                 #    conflict_action='autorename')
@@ -190,32 +194,31 @@ class prome:
                 folder_exists = True
         
         try:
-            with SynologyDrive(CONFIG['user'],self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
+            with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd: 
                 if folder_exists:
-                    p_link = synd.get_file_or_folder_info(f"{path}/{folder}")['data']['permanent_link']
+                    folder_info = synd.get_file_or_folder_info(f"{path}/{folder}")['data']
+                    folder_id = folder_info['file_id']
+                    p_link = folder_info['permanent_link']
                 else:
-                    #path = path[1:] if path[0] == "/" else path
                     rst = synd.create_folder(folder,path)
-                    #rst = synd.create_folder(f"{path}/{folder}")
 
+                    folder_id = rst['data']['file_id']
                     p_link = rst['data']['permanent_link']
         except Exception as err:
             logging.error(err)
             logging.error(f"Cannot create folder {path}/{folder}")
             return '',''
 
-        return p_link
+        return folder_id,p_link
 
 
-    def send_message(self,dep,message):
-        tokens = ast.literal_eval(CONFIG['tokens'])
+    def send_message(self,rec,RECIPIENTS,message):
         try:
-            webhook = IncomingWebhook('nas.prome.sg', tokens[dep], port=5001)
+            webhook = IncomingWebhook('nas.prome.sg', RECIPIENTS[rec]['token'], port=5001)
             webhook.send(message)
-            return 1
+            return True
         except Exception as err:
-            raise
             logging.error(err)
-            logging.error(f"Cannot send message to {dep}")
-            return 0
+            logging.error(f"Cannot send message to {rec}")
+            return False
 

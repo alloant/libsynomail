@@ -2,12 +2,12 @@
 
 import logging
 
-from libsynomail import CONFIG, GROUPS, EXT
+from libsynomail import EXT
 import libsynomail.connection as con
 
 
-def change_names():
-    for group,ctrs in GROUPS.items():
+def change_names(groups):
+    for group,ctrs in groups.items():
         notes = con.nas.get_file_list(f"/mydrive/ToSend/{group}")
         
         if not notes: continue
@@ -17,8 +17,8 @@ def change_names():
                 con.nas.change_name(f"{note['display_path']}",f"cr{note['name']}")
 
 
-def send_to_all():
-    for group,ctrs in GROUPS.items():
+def send_to_all(groups):
+    for group,ctrs in groups.items():
         notes = con.nas.get_file_list(f"/mydrive/ToSend/{group}")
         
         if not notes: continue
@@ -31,15 +31,8 @@ def send_to_all():
                     con.nas.copy(note['display_path'],f"/team-folders/Mailbox {ctr}/cr to {ctr}")
                     
 
-def init_send_mail():
+def init_send_mail(groups):
     logging.info('Starting to send mail to ctr')
-    change_names()
-    send_to_all()
+    change_names(groups)
+    send_to_all(groups)
     logging.info('Finish to send mail to ctr')
-
-def main():
-    init_send_mail()     
-    input("Done")
-
-if __name__ == '__main__':
-    main()

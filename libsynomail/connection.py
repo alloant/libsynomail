@@ -1,5 +1,6 @@
 from libsynomail.nas import prome
 
-def init_nas(PASS):
+def init_nas(user,PASS):
     global nas
-    nas = prome(PASS)
+    nas = prome(user,PASS)
+    
