@@ -30,7 +30,7 @@ def write_eml(rec,note,path_download):
         part['Content-Disposition'] = f'attachment; filename = {file_name}'
         msg.attach(part)
 
-    with open(f"{path_download}/forti_out/{note.key}.eml",'w') as file:
+    with open(f"{path_download}/outbox forti/{note.key}.eml",'w') as file:
         emlGenerator = generator.Generator(file)
         emlGenerator.flatten(msg)
 

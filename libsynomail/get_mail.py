@@ -215,6 +215,18 @@ def register_to_notes(register,flow = 'in'):
 
 
 def rec_in_groups(recipients,RECIPIENTS,ctr = True):
+    if recipients == 'all':
+        for key,rec in RECIPIENTS:
+            if 'email' in rec: #es forti
+                if not ctr:
+                    send_to.append(key)
+            else:
+                if ctr:
+                    send_to.append(key)
+        
+        return list(set(send_to))
+
+
     recs = [rec.strip() for rec in recipients.split(',')]
     send_to = []
     ex_groups = []
@@ -249,8 +261,18 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
 
     return list(set(send_to))
 
-
 def new_mail_ctr(RECIPIENTS,note):
+    send_to = rec_in_groups(note.dept,RECIPIENTS,True)
+    
+    for st in send_to:
+        if not st.lower() in note.sent_to.lower():
+            for file in note.files:
+                con.nas.copy(file.file_id,f"/team-folders/Mailbox {st}/cr to {st}")
+            note.sent_to += f",{st}" if note.sent_to else st
+    
+    return True
+
+def new_mail_ctr_sheet(RECIPIENTS,note):
     wb = Workbook()
     ws = wb.active
     ws.append(['No','Date','Content','Ref'])
@@ -280,7 +302,7 @@ def new_mail_eml(RECIPIENTS,note,path_download):
 def new_mail_asr(note,path_download):
     if not 'asr' in note.sent_to:
         for file in note.files:
-            con.nas.download_file(file.file_id,f"{path_download}/asr_out",file.name)
+            con.nas.download_file(file.file_id,f"{path_download}/outbox asr",file.name)
         note.sent_to += f",asr" if note.sent_to else 'asr'
     return True
 
