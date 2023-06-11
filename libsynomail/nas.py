@@ -184,6 +184,7 @@ class prome:
             except Exception as err:
                 logging.error(err)
                 logging.warning("Cannot convert register to Synology Office")
+                return '','',''
 
 
     def create_folder(self,path,folder):

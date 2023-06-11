@@ -3,6 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 import logging
+import webbrowser
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
@@ -111,7 +112,10 @@ def generate_register(path_register,notes):
         ws.column_dimensions[get_column_letter(i)].width = column_width
     
     date = datetime.today().strftime('%Y-%m-%d-%HH-%Mm')
-    con.nas.upload_convert_wb(wb,f"register-{date}.xlsx",f"{path_register}") 
+    r_path,r_id,r_link = con.nas.upload_convert_wb(wb,f"register-{date}.xlsx",f"{path_register}")
+    
+    if r_link != '':
+        webbrowser.open(f"https://nas.prome.sg:5001/oo/r/{r_link}")
 
 
 def rename_file(source,file,new_name = ''):
