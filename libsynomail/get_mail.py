@@ -134,6 +134,8 @@ def rename_file(source,file,new_name = ''):
 def manage_files_despacho(path_files,files,is_from_dr = False):
     flow = 'out' if is_from_dr else 'in'
     notes = notes_from_files(files,flow)
+
+    if not notes_from_files: return None
     
     if is_from_dr: #We only need this for the dr to know where they are sending the note
         register = Register('out')
@@ -300,6 +302,13 @@ def new_mail_eml(RECIPIENTS,note,path_download):
     return True
 
 def new_mail_asr(note,path_download):
+    if not st.lower() in note.sent_to.lower():
+        for file in note.files:
+            con.nas.copy(file.file_id,f"/team-folders/Mail asr/Mail to asr")
+        note.sent_to += f",{st}" if note.sent_to else st
+    return True
+
+def new_mail_asr_download(note,path_download):
     if not 'asr' in note.sent_to:
         for file in note.files:
             con.nas.download_file(file.file_id,f"{path_download}/outbox asr",file.name)
