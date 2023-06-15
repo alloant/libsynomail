@@ -3,19 +3,24 @@ from attrdict import AttrDict
 from libsynomail import INV_EXT
 from datetime import datetime
 
+import libsynomail.connection as con
 
 class File(AttrDict):
-    def __init__(self,data,original_id = ''):
+    def __init__(self,data,original_name = ''):
         self.name = data['name']
         self.type = data['type']
-        self.display_path = data['display_path']
+        self.path = str(Path(data['display_path']).parent)
         self.file_id = data['file_id']
         self.permanent_link = data['permanent_link']
-        self.original_id = original_id
+        self.original_name = original_name
     
     def __str__(self): 
          return self.name
     
+    @property
+    def display_path(self):
+        return f"{self.path}/{self.name}"
+
     @property
     def ext(self):
         return Path(self.name).suffix[1:]
@@ -36,8 +41,30 @@ class File(AttrDict):
         return f'<https://nas.prome.sg:5001/{self.chain_link}/{self.permanent_link}|{link_text}>'
 
     def exportExcel(self):
-        return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_id]
+        return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_name]
 
+    def move(self,dest):
+        con.nas.move(self.display_path,dest)
+        if self.original_name != '':
+            con.nas.move(f"{self.path}/{self.original_name}",dest)
+        self.path = dest
+
+    def copy(self,dest):
+        con.nas.copy(self.display_path,dest)
+
+    def convert(self):
+        self.original_name = self.name
+        name,path,fid,p_link = con.nas.convert_office(self.display_path)
+        self.name = name
+        self.file_id = fid
+        self.permanent_link = p_link
+
+    def rename(self,new_name):
+        con.nas.change_name(self.display_path,new_name)
+        self.name = new_name
+
+    def download(self,dest = None):
+        return con.nas.download_file(self.display_path,dest)
 
 class Note(AttrDict):
     def __init__(self,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
@@ -53,6 +80,7 @@ class Note(AttrDict):
         self.files = []
         self.permanent_link = ''
         self.folder_id = ''
+        self.folder_path = ''
         self.archived = ''
         self.sent_to = ''
         self.flow = flow
@@ -165,4 +193,11 @@ class Note(AttrDict):
 
     def exportExcel(self):
         return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
+
+    def move(self,dest):
+        if self.folder_path != '' and self.folder_path != None:
+            con.nas.move(self.folder_path,dest)
+        else:
+            if self.files:
+                self.files[0].move(dest)
 

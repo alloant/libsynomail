@@ -52,7 +52,7 @@ class prome:
                 logging.debug(f'Sending synology command to move {path}')
                 rst = synd.move_path(path,new_path)
                 logging.debug('Command to move sent')
-
+                print(rst)
                 task_id = rst['data']['async_task_id']
         
                 logging.debug("Waiting for synology to move")
@@ -65,12 +65,15 @@ class prome:
                 logging.debug("{path} was moved to {new_path}")
 
                 rst_data = rst['data']['result'][0]['data']['result']
-        
+       
+                print(rst)
+
                 if not 'targets' in rst_data:
                     logging.error(f'Synology cannot move the file {path} to {new_path}')
                     return False
                 return True
         except Exception as err:
+            raise
             logging.error(err)
             logging.warning(f'Cannot move the file {path} to {new_path}')
             return False
@@ -113,9 +116,17 @@ class prome:
                 return Path(name).name,new_file_path,new_file_id,new_permanent_link
 
         except Exception as err:
+            raise
             logging.error(err)
-            logging.warning(f'Cannot convert {file_path}')
-            return '','',''
+            logging.warning(f'Cannot convert {file_id}')
+            return '','','',''
+
+
+    def get_info(self,path):
+        with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
+            return synd.get_file_or_folder_info(path)
+
+        return None
 
 
     def download_file(self,file_path,dest=None,file_name = None):
@@ -128,6 +139,7 @@ class prome:
                 ext = Path(file_name).suffix[1:]
                 if ext in INV_EXT:
                     ext = INV_EXT[ext]
+                    print(file_path)
                     bio = synd.download_synology_office_file(file_path)
                 else:
                     bio = synd.download_file(file_path)
@@ -141,6 +153,7 @@ class prome:
                     return bio
         
         except Exception as err:
+            raise
             logging.error(err)
             logging.error(f"Cannot download {file_path}")
 

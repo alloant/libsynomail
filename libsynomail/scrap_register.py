@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 
 class Register(AttrDict):
     def __init__(self,flow):
-        self.wb = load_workbook(con.nas.download_file(f"/mydrive/00 - Admin/Mail {flow} Registry.osheet"))
+        self.wb = load_workbook(con.nas.download_file(f"{con.CONFIG['folders']['archive']}/Mail {flow} Registry.osheet"))
         self.cg = list(self.wb[f'cg {flow} (1-249)'].iter_rows(values_only=True))
         self.asr = list(self.wb[f'asr {flow} (250-999)'].iter_rows(values_only=True))
         self.ctr = list(self.wb[f'ctr {flow} (from 1000 to 1999)'].iter_rows(values_only=True))
