@@ -47,7 +47,7 @@ class File(AttrDict):
         if new_path: self.path = new_path
 
         con.nas.move(self.display_path,dest)
-        if self.original_name != '':
+        if self.original_name:
             con.nas.move(f"{self.path}/{self.original_name}",dest)
         self.path = dest
 
@@ -66,6 +66,7 @@ class File(AttrDict):
         self.name = new_name
 
     def download(self,dest = None):
+        print(self.display_path,dest)
         return con.nas.download_file(self.display_path,dest)
 
 class Note(AttrDict):

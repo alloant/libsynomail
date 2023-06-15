@@ -30,8 +30,12 @@ class Register(AttrDict):
             if reg[0] == no: break
 
         if self.get_type(no) in ['ctr','r']:
-            return reg[2]
+            return reg[2],reg[4]
         else:
-            return self.get_type(no)
+            if self.get_type(no) == 'cg':
+                return self.get_type(no),row[5]
+            else:
+                return self.get_type(no),row[3]
+
 
  

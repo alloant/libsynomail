@@ -157,7 +157,7 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
                 
                 # Getting information about the note from Mail out
                 if is_from_dr:
-                    note.dept = register.scrap_destination(note.no)
+                    note.dept,note.content = register.scrap_destination(note.no)
                 
                 # Getting the key only in first file and changing names
                 if i == 0: #It is the main file
@@ -362,7 +362,6 @@ def register_notes(is_from_dr = False):
                             if rst: note.sent_to += f",{dep}" if note.sent_to else dep
     
     except Exception as err:
-        raise
         logging.error(err)
         logging.error("There was some error registering the notes")
         
