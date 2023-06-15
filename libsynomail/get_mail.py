@@ -137,8 +137,6 @@ def rename_file(source,file,new_name = ''):
         
         new_name = new_name.replace('&','and')
         file.rename(new_name)
-        #con.nas.change_name(file.file_id,new_name)
-        #file.name = new_name
     except Exception as err:
         logging.error(err)
         logging.error(f"Problem changing name to {file.name}")
@@ -152,33 +150,41 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
     if is_from_dr: #We only need this for the dr to know where they are sending the note
         register = Register('out')
         
-    for note in notes.values():
-        for i,file in enumerate(note.files):
-            dest = f"{path_files}"
-            
-            if is_from_dr:
-                note.dept = register.scrap_destination(note.no)
-            #else:
-            if i == 0: #It is the main file
-                main_old_name = Path(file.name).stem
-                num = f"0000{note.no}"[-4:]
-                #main_name = f"{type}_{note.source}_{num}" if file.type == 'r' else f"{note.source}_{num}"
-                main_name = f"{note.key.split('_')[0]}_{num}"
-                rename_file(note.source,file,main_name)
-            else:
-                rename_file(note.source,file,Path(file.name.replace(main_old_name,main_name)).stem)
+    try:
+        for note in notes.values():
+            for i,file in enumerate(note.files):
+                dest = f"{path_files}"
+                
+                # Getting information about the note from Mail out
+                if is_from_dr:
+                    note.dept = register.scrap_destination(note.no)
+                
+                # Getting the key only in first file and changing names
+                if i == 0: #It is the main file
+                    main_old_name = Path(file.name).stem
+                    num = f"0000{note.no}"[-4:]
+                    main_name = f"{note.key.split('_')[0]}_{num}"
+                    rename_file(note.source,file,main_name)
+                else:
+                    rename_file(note.source,file,Path(file.name.replace(main_old_name,main_name)).stem)
 
-            if note.of_annex != '':
-                note.folder_id,note.permanent_link = con.nas.create_folder(dest,main_name)
-                dest += f"/{main_name}"
-                note.folder_path = dest
-            #Before everything till here was inside the else
-            file.move(dest)
-            
-            ext = Path(file.name).suffix[1:]
-            if ext in EXT:
-                file.convert()
-                #file.name,file.display_path,file.file_id,file.permanent_link = con.nas.convert_office(file.file_id)
+                # Creating a folder if there are more than 1 file
+                if note.of_annex != '':
+                    note.folder_id,note.permanent_link = con.nas.create_folder(dest,main_name)
+                    dest += f"/{main_name}"
+                    note.folder_path = dest
+                
+                # Moving the note to dest
+                file.move(dest)
+                
+                # Convert the file if needed
+                ext = Path(file.name).suffix[1:]
+                if ext in EXT:
+                    file.convert()
+
+    except Exception as err:
+        logging.error(err)
+        logging.error("There was some error managing the notes")
 
     generate_register(f"{path_files}",notes)
     
@@ -273,7 +279,6 @@ def new_mail_ctr(note):
         if not st.lower() in note.sent_to.lower():
             for file in note.files:
                 file.copy(con.CONFIG['mail_out']['ctr'].replace('@',st))
-                #con.nas.copy(file.file_id,con.CONFIG['mail_out']['ctr'].replace('@',st))
             note.sent_to += f",{st}" if note.sent_to else st
     
     return True
@@ -309,7 +314,6 @@ def new_mail_asr(note):
     if not 'asr' in note.sent_to.lower():
         for file in note.files:
             file.copy(con.CONFIG['mail_out']['asr'])
-            #con.nas.copy(file.file_id,con.CONFIG['mail_out']['asr'])
         note.sent_to += f",asr" if note.sent_to else 'asr'
     return True
 
@@ -326,37 +330,40 @@ def register_notes(is_from_dr = False):
     notes = read_register_file(register_dest,flow)
     
     if not notes: return None
+    
+    try:
+        for note in notes.values():
+            # Moving note to archive if needed
+            if not note.archived and note.dept != '':
+                if is_from_dr:
+                    dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
+                else:
+                    dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
+                
+                note.move(dest,register_dest)
+                note.archived = True
 
-    for note in notes.values():
-        if not note.archived and note.dept != '':
-            if is_from_dr:
-                dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
-            else:
-                dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
-            
-            note.move(dest) 
-            #con.nas.move(note.synology_id,dest)
-            note.archived = True
-
-            #if len(note.files) == 1:
-            #    if note.files[0].original_id:
-            #        con.nas.move(note.files[0].original_id,dest)
-            
-        if note.archived and note.dept != '':
-            if is_from_dr:
-                if note.no < 250: #cg
-                    rst = new_mail_eml(note)
-                elif note.no < 1000: #asr
-                    rst = new_mail_asr(note)
-                elif note.no < 2000: #ctr
-                    rst = new_mail_ctr(note)
-                else: #r
-                    rst = new_mail_eml(note)
-            else:
-                depts = [dep.lower().strip() for dep in note.dept.split(',')]
-                for dep in depts:
-                    if not dep.lower() in note.sent_to.lower():
-                        rst = con.nas.send_message(dep,con.CONFIG['deps'],note.message)
-                        if rst: note.sent_to += f",{dep}" if note.sent_to else dep
-
+            # Sending copy/message of note to recipient
+            if note.archived and note.dept != '':
+                if is_from_dr: # Is mail out
+                    if note.no < 250: #cg
+                        rst = new_mail_eml(note)
+                    elif note.no < 1000: #asr
+                        rst = new_mail_asr(note)
+                    elif note.no < 2000: #ctr
+                        rst = new_mail_ctr(note)
+                    else: #r
+                        rst = new_mail_eml(note)
+                else: # Is mail in to one/several dr
+                    depts = [dep.lower().strip() for dep in note.dept.split(',')]
+                    for dep in depts:
+                        if not dep.lower() in note.sent_to.lower():
+                            rst = con.nas.send_message(dep,con.CONFIG['deps'],note.message)
+                            if rst: note.sent_to += f",{dep}" if note.sent_to else dep
+    
+    except Exception as err:
+        raise
+        logging.error(err)
+        logging.error("There was some error registering the notes")
+        
     generate_register(register_dest,notes)

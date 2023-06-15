@@ -43,7 +43,9 @@ class File(AttrDict):
     def exportExcel(self):
         return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_name]
 
-    def move(self,dest):
+    def move(self,dest,new_path = None):
+        if new_path: self.path = new_path
+
         con.nas.move(self.display_path,dest)
         if self.original_name != '':
             con.nas.move(f"{self.path}/{self.original_name}",dest)
@@ -194,10 +196,17 @@ class Note(AttrDict):
     def exportExcel(self):
         return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
 
-    def move(self,dest):
+    def move(self,dest,new_path = None):
         if self.folder_path != '' and self.folder_path != None:
+            if new_path:
+                self.folder_path = f"{self.path}/{self.folder_path.split('/')[-1]}"
             con.nas.move(self.folder_path,dest)
         else:
             if self.files:
-                self.files[0].move(dest)
+                self.files[0].move(dest,new_path=new_path)
+
+    def create_folder(self,dest):
+        self.folder_id,self.permanent_link = con.nas.create_folder(dest,main_name)
+        dest += f"/{main_name}"
+        note.folder_path = dest
 

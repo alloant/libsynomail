@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 from libsynomail import EXT,INV_EXT
+
 import libsynomail.connection as con
 
 def write_eml(rec,note,path_download):
@@ -24,7 +25,6 @@ def write_eml(rec,note,path_download):
         ext = Path(file.name).suffix[1:]
         file_name = f"{Path(file.name).stem}.{INV_EXT[ext]}" if ext in INV_EXT else file.name
 
-        #attachment = con.nas.download_file(file.file_id)
         attachment = file.download()
         
         if attachment:
