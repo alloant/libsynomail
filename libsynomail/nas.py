@@ -52,7 +52,6 @@ class prome:
                 logging.debug(f'Sending synology command to move {path}')
                 rst = synd.move_path(path,new_path)
                 logging.debug('Command to move sent')
-                print(rst)
                 task_id = rst['data']['async_task_id']
         
                 logging.debug("Waiting for synology to move")
@@ -66,17 +65,17 @@ class prome:
 
                 rst_data = rst['data']['result'][0]['data']['result']
        
-                print(rst)
-
                 if not 'targets' in rst_data:
                     logging.error(f'Synology cannot move the file {path} to {new_path}')
                     return False
-                return True
+                else:
+                    if rst_data['targets']:
+                        new_id = rst_data['targets'][0]['file_id']
+                return True,new_id
         except Exception as err:
-            raise
             logging.error(err)
             logging.warning(f'Cannot move the file {path} to {new_path}')
-            return False
+            return False,''
 
     def copy(self,path,dest):
         try:
@@ -87,9 +86,12 @@ class prome:
                 else:
                     tmp_file = synd.download_file(path)
                     synd.upload_file(tmp_file,dest)
+
+                return True
         except Exception as err:
             logging.error(err)
             logging.error(f"Cannot copy file {path} to {dest}")
+            return False
 
 
     def convert_office(self,file_id,delete = False):
@@ -103,6 +105,7 @@ class prome:
                 while(not rst['data']['has_fail'] and rst['data']['result'][0]['data']['status'] == 'in_progress'):
                     time.sleep(1)
                     rst = synd.get_task_status(task_id)
+                
                 
                 file_path = synd.get_file_or_folder_info(file_id)['data']['display_path'] 
                 ext = Path(file_path).suffix[1:]
@@ -139,7 +142,6 @@ class prome:
                 ext = Path(file_name).suffix[1:]
                 if ext in INV_EXT:
                     ext = INV_EXT[ext]
-                    print(file_path)
                     bio = synd.download_synology_office_file(file_path)
                 else:
                     bio = synd.download_file(file_path)

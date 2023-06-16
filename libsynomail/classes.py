@@ -6,13 +6,14 @@ from datetime import datetime
 import libsynomail.connection as con
 
 class File(AttrDict):
-    def __init__(self,data,original_name = ''):
+    def __init__(self,data,original_name = '',original_id = ''):
         self.name = data['name']
         self.type = data['type']
         self.path = str(Path(data['display_path']).parent)
         self.file_id = data['file_id']
         self.permanent_link = data['permanent_link']
         self.original_name = original_name
+        self.original_id = original_id
     
     def __str__(self): 
          return self.name
@@ -41,33 +42,42 @@ class File(AttrDict):
         return f'<https://nas.prome.sg:5001/{self.chain_link}/{self.permanent_link}|{link_text}>'
 
     def exportExcel(self):
-        return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_name]
+        return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_name,self.original_id]
 
     def move(self,dest,new_path = None):
         if new_path: self.path = new_path
 
-        con.nas.move(self.display_path,dest)
-        if self.original_name:
-            con.nas.move(f"{self.path}/{self.original_name}",dest)
-        self.path = dest
+        #rst,self.file_id = con.nas.move(self.display_path,dest)
+        rst,self.file_id = con.nas.move(self.file_id,dest)
+        if rst:
+            if self.original_name:
+                #con.nas.move(f"{self.path}/{self.original_name}",dest)
+                con.nas.move(self.original_id,dest)
+            self.path = dest
+        
+        return rst
 
     def copy(self,dest):
-        con.nas.copy(self.display_path,dest)
+        #return con.nas.copy(self.display_path,dest)
+        return con.nas.copy(self.file_id,dest)
 
     def convert(self):
         self.original_name = self.name
-        name,path,fid,p_link = con.nas.convert_office(self.display_path)
+        self.original_id = self.file_id
+        #name,path,fid,p_link = con.nas.convert_office(self.display_path)
+        name,path,fid,p_link = con.nas.convert_office(self.file_id)
         self.name = name
         self.file_id = fid
         self.permanent_link = p_link
 
     def rename(self,new_name):
-        con.nas.change_name(self.display_path,new_name)
+        #con.nas.change_name(self.display_path,new_name)
+        con.nas.change_name(self.file_id,new_name)
         self.name = new_name
 
     def download(self,dest = None):
-        print(self.display_path,dest)
-        return con.nas.download_file(self.display_path,dest)
+        #return con.nas.download_file(self.display_path,dest)
+        return con.nas.download_file(self.file_id,dest)
 
 class Note(AttrDict):
     def __init__(self,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
@@ -198,16 +208,19 @@ class Note(AttrDict):
         return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
 
     def move(self,dest,new_path = None):
-        if self.folder_path != '' and self.folder_path != None:
+        if self.folder_path:
             if new_path:
                 self.folder_path = f"{self.path}/{self.folder_path.split('/')[-1]}"
-            con.nas.move(self.folder_path,dest)
+            #rst,self.folder_id = con.nas.move(self.folder_path,dest)
+            rst,self.folder_id = con.nas.move(self.folder_id,dest)
+            return rst
         else:
             if self.files:
-                self.files[0].move(dest,new_path=new_path)
+                return self.files[0].move(dest,new_path=new_path)
 
     def create_folder(self,dest):
         self.folder_id,self.permanent_link = con.nas.create_folder(dest,main_name)
         dest += f"/{main_name}"
-        note.folder_path = dest
+        self.folder_path = dest
+
 

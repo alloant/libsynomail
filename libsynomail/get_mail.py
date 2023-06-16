@@ -36,8 +36,6 @@ FONT_BOLD = Font(name= 'Arial',
 
 
 def get_notes_in_folders(folders,ctrs):
-    team_folders = con.nas.get_team_folders()
-
     files = []
     paths = []
     for key,path in folders.items():
@@ -78,11 +76,9 @@ def notes_from_files(files,flow = 'in'):
             notes[note.key].addFile(file['file'])
         else:
             file.move(f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
-            #con.nas.move(file['file']['file_id'],f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
             ext = Path(file['file']['name']).suffix[1:]
             if ext in EXT:
                 file.convert()
-                #con.nas.convert_office(file['file']['file_id'])
 
     return notes
 
@@ -99,7 +95,7 @@ def generate_register(path_register,notes):
     ws_data.append(['Key','Folder_id','Permanent_link'])
  
     ws_files = wb.create_sheet(title="Files")
-    ws_files.append(['Key','Name','Type','Display_data','File_id','Permanent_link','Original_id'])
+    ws_files.append(['Key','Name','Type','Display_data','File_id','Permanent_link','Original_path','Original_id'])
 
     
     for key,note in notes.items():
@@ -228,7 +224,7 @@ def register_to_notes(register,flow = 'in'):
 
         for file in files:
             if file[0] == note.key:
-                note.addFile(File({'name':file[1],'type':file[2],'display_path':file[3],'file_id':file[4],'permanent_link':file[5]},file[6]))
+                note.addFile(File({'name':file[1],'type':file[2],'display_path':file[3],'file_id':file[4],'permanent_link':file[5]},file[6],file[7]))
 
         notes[note.key] = note
     
@@ -274,14 +270,17 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
 
 def new_mail_ctr(note):
     send_to = rec_in_groups(note.dept,con.CONFIG['ctrs'],True)
-    
+    rst = True 
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
             for file in note.files:
-                file.copy(con.CONFIG['mail_out']['ctr'].replace('@',st))
-            note.sent_to += f",{st}" if note.sent_to else st
+                if not file.copy(con.CONFIG['mail_out']['ctr'].replace('@',st)):
+                    rst = False
+            if rst:
+                note.sent_to += f",{st}" if note.sent_to else st
+                return True
     
-    return True
+    return False
 
 def new_mail_ctr_sheet(note):
     wb = Workbook()
@@ -307,15 +306,20 @@ def new_mail_eml(note):
             note.sent_to += f",{st}" if note.sent_to else st
             TO.append(con.CONFIG['r'][st]['email'])
     if TO:
-        write_eml(",".join(TO),note,con.CONFIG['folders']['local_folder'])
-    return True
+        return write_eml(",".join(TO),note,con.CONFIG['folders']['local_folder'])
+    return False
 
 def new_mail_asr(note):
+    rst = True
     if not 'asr' in note.sent_to.lower():
         for file in note.files:
-            file.copy(con.CONFIG['mail_out']['asr'])
-        note.sent_to += f",asr" if note.sent_to else 'asr'
-    return True
+            if not file.copy(con.CONFIG['mail_out']['asr']):
+                rst = False
+        if rst:
+            note.sent_to += f",asr" if note.sent_to else 'asr'
+            return True
+
+    return False
 
 def new_mail_asr_download(note):
     if not 'asr' in note.sent_to:
@@ -340,8 +344,8 @@ def register_notes(is_from_dr = False):
                 else:
                     dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
                 
-                note.move(dest,register_dest)
-                note.archived = True
+                if note.move(dest,register_dest):
+                    note.archived = True
 
             # Sending copy/message of note to recipient
             if note.archived and note.dept != '':
@@ -359,7 +363,8 @@ def register_notes(is_from_dr = False):
                     for dep in depts:
                         if not dep.lower() in note.sent_to.lower():
                             rst = con.nas.send_message(dep,con.CONFIG['deps'],note.message)
-                            if rst: note.sent_to += f",{dep}" if note.sent_to else dep
+                            if rst: 
+                                note.sent_to += f",{dep}" if note.sent_to else dep
     
     except Exception as err:
         logging.error(err)

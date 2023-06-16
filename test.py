@@ -22,11 +22,14 @@ con.init_nas('vInd1',PASS,'')
 #print(info)
 
 
-file_id = '757845744049765187'
+file_id = '758152172627081340'
 #757845037896743694
-con.nas.move(file_id,"/team-folders/File Sharing/Antonio/Tests/Despacho/Inbox Despacho")
-con.nas.convert_office(fid)
+#con.nas.move(file_id,"/team-folders/File Sharing/Antonio/Tests/Despacho/Inbox Despacho")
+#con.nas.convert_office(fid)
 
+#info = con.nas.get_info("/team-folders/Despacho/ToSend/2682.docx")
+con.nas.convert_office("/team-folders/Despacho/ToSend/2682.docx")
+print(info)
 
 
 #con4.nas.convert_office(f"{path4}/test.docx")

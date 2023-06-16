@@ -35,7 +35,7 @@ FONT_BOLD = Font(name= 'Arial',
                 )
 
 
-def get_notes_in_folders(folders,ctrs,DEBUG = False):
+def get_notes_in_folders(folders,ctrs):
     team_folders = con.nas.get_team_folders()
 
     files = []
@@ -49,7 +49,7 @@ def get_notes_in_folders(folders,ctrs,DEBUG = False):
             paths.append([key,'',path])
     
     for path in paths:
-        if DEBUG and not (path[1] == 'gul' or path[1] == 'vind1'): continue
+        #if con.CONFIG['DEBUG'] and not (path[1] == 'gul' or path[1] == 'vind1'): continue
 
         logging.debug(f"Checking path {path}")
         files_in_folder = con.nas.get_file_list(path[2])
@@ -70,11 +70,19 @@ def notes_from_files(files,flow = 'in'):
     files.sort(reverse=True,key = lambda file: f"{file['main']}_{file['file']}")
 
     for file in files:
-        note = Note(file['type'],file['source'],file['num'],flow)
-        if not note.key in notes:
-            notes[note.key] = note
+        if file['num'] != "":
+            note = Note(file['type'],file['source'],file['num'],flow)
+            if not note.key in notes:
+                notes[note.key] = note
             
-        notes[note.key].addFile(file['file'])
+            notes[note.key].addFile(file['file'])
+        else:
+            file.move(f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
+            #con.nas.move(file['file']['file_id'],f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
+            ext = Path(file['file']['name']).suffix[1:]
+            if ext in EXT:
+                file.convert()
+                #con.nas.convert_office(file['file']['file_id'])
 
     return notes
 
@@ -98,7 +106,7 @@ def generate_register(path_register,notes):
         ws.append(note.exportExcel())
         ws[ws.max_row][5].number_format = 'dd/mm/yyyy;@'
        
-        ws_data.append([note.key,note.folder_id,note.permanent_link])
+        ws_data.append([note.key,note.folder_path,note.permanent_link])
 
         for cell in ws[ws.max_row]:
             cell.alignment = Alignment(horizontal='center')
@@ -128,9 +136,7 @@ def rename_file(source,file,new_name = ''):
             new_name += f".{ext}"
         
         new_name = new_name.replace('&','and')
-
-        con.nas.change_name(file.file_id,new_name)
-        file.name = new_name
+        file.rename(new_name)
     except Exception as err:
         logging.error(err)
         logging.error(f"Problem changing name to {file.name}")
@@ -138,38 +144,47 @@ def rename_file(source,file,new_name = ''):
 def manage_files_despacho(path_files,files,is_from_dr = False):
     flow = 'out' if is_from_dr else 'in'
     notes = notes_from_files(files,flow)
-
+    
     if not notes_from_files: return None
     
     if is_from_dr: #We only need this for the dr to know where they are sending the note
         register = Register('out')
         
-    for note in notes.values():
-        for i,file in enumerate(note.files):
-            dest = f"{path_files}"
-            
-            if is_from_dr:
-                note.dept = register.scrap_destination(note.no)
-            #else:
-            if i == 0: #It is the main file
-                main_old_name = Path(file.name).stem
-                num = f"0000{note.no}"[-4:]
-                #main_name = f"{type}_{note.source}_{num}" if file.type == 'r' else f"{note.source}_{num}"
-                main_name = f"{note.key.split('_')[0]}_{num}"
-                rename_file(note.source,file,main_name)
-            else:
-                rename_file(note.source,file,Path(file.name.replace(main_old_name,main_name)).stem)
+    try:
+        for note in notes.values():
+            for i,file in enumerate(note.files):
+                dest = f"{path_files}"
+                
+                # Getting information about the note from Mail out
+                if is_from_dr:
+                    note.dept,note.content = register.scrap_destination(note.no)
+                
+                # Getting the key only in first file and changing names
+                if i == 0: #It is the main file
+                    main_old_name = Path(file.name).stem
+                    num = f"0000{note.no}"[-4:]
+                    main_name = f"{note.key.split('_')[0]}_{num}"
+                    rename_file(note.source,file,main_name)
+                else:
+                    rename_file(note.source,file,Path(file.name.replace(main_old_name,main_name)).stem)
 
-            if note.of_annex != '':
-                note.folder_id,note.permanent_link = con.nas.create_folder(dest,main_name)
-                dest += f"/{main_name}"
-            #Before everything till here was inside the else
+                # Creating a folder if there are more than 1 file
+                if note.of_annex != '':
+                    note.folder_id,note.permanent_link = con.nas.create_folder(dest,main_name)
+                    dest += f"/{main_name}"
+                    note.folder_path = dest
+                
+                # Moving the note to dest
+                file.move(dest)
+                
+                # Convert the file if needed
+                ext = Path(file.name).suffix[1:]
+                if ext in EXT:
+                    file.convert()
 
-            con.nas.move(file.file_id,dest)
-            ext = Path(file.name).suffix[1:]
-            if ext in EXT:
-                file.original_id = file.file_id
-                file.name,file.display_path,file.file_id,file.permanent_link = con.nas.convert_office(file.file_id)
+    except Exception as err:
+        logging.error(err)
+        logging.error("There was some error managing the notes")
 
     generate_register(f"{path_files}",notes)
     
@@ -197,7 +212,7 @@ def register_to_notes(register,flow = 'in'):
     notes = {}
     
     for i,row in enumerate(notes_data):
-        no = row[2].split('","')[1][:-2]
+        no = row[2].replace(' ','').split('","')[1][:-2]
         note = Note(row[0],row[1],no,flow=flow)
         note.year = row[3] if row[3] else ''
         note.ref = row[4] if row[4] else ''
@@ -208,7 +223,7 @@ def register_to_notes(register,flow = 'in'):
         note.archived = row[10] if row[10] else ''
         note.sent_to = row[11] if row[11] else ''
 
-        note.folder_id = data[i][1]
+        note.folder_path = data[i][1]
         note.permanent_link = data[i][2]
 
         for file in files:
@@ -223,12 +238,7 @@ def register_to_notes(register,flow = 'in'):
 def rec_in_groups(recipients,RECIPIENTS,ctr = True):
     if recipients == 'all':
         for key,rec in RECIPIENTS:
-            if 'email' in rec: #es forti
-                if not ctr:
-                    send_to.append(key)
-            else:
-                if ctr:
-                    send_to.append(key)
+            send_to.append(key)
         
         return list(set(send_to))
 
@@ -257,104 +267,111 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
         if putin:
             for gp in in_groups:
                 if gp in rec['groups']:
-                    if 'email' in rec: #es forti
-                        if not ctr:
-                            send_to.append(key)
-                    else:
-                        if ctr:
-                            send_to.append(key)
+                    send_to.append(key)
 
 
     return list(set(send_to))
 
-def new_mail_ctr(RECIPIENTS,note):
-    send_to = rec_in_groups(note.dept,RECIPIENTS,True)
-    
+def new_mail_ctr(note):
+    send_to = rec_in_groups(note.dept,con.CONFIG['ctrs'],True)
+    rst = True 
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
             for file in note.files:
-                con.nas.copy(file.file_id,f"/team-folders/Mailbox {st}/cr to {st}")
-            note.sent_to += f",{st}" if note.sent_to else st
+                if not file.copy(con.CONFIG['mail_out']['ctr'].replace('@',st)):
+                    rst = False
+            if rst:
+                note.sent_to += f",{st}" if note.sent_to else st
+                return True
     
-    return True
+    return False
 
-def new_mail_ctr_sheet(RECIPIENTS,note):
+def new_mail_ctr_sheet(note):
     wb = Workbook()
     ws = wb.active
     ws.append(['No','Date','Content','Ref'])
     ws.append([note.sheetLink(f"cr {note.no}/{note.year[2:]}"),note.date,note.content,note.ref])
     ws[ws.max_row][1].number_format = 'dd/mm/yyyy;@'
 
-    send_to = rec_in_groups(note.dept,RECIPIENTS,True)
+    send_to = rec_in_groups(note.dept,con.CONFIG['ctrs'],True)
     
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
             note.sent_to += f",{st}" if note.sent_to else st
-            con.nas.upload_convert_wb(wb,f"new_mail.xlsx",f"/team-folders/Mailbox {st}/cr to {st}")
+            con.nas.upload_convert_wb(wb,f"new_mail.xlsx",con.CONFIG['mail_out']['ctr'].replace('@',st))
     
     return True
 
-def new_mail_eml(RECIPIENTS,note,path_download):
-    send_to = rec_in_groups(note.dept,RECIPIENTS,False)
+def new_mail_eml(note):
+    send_to = rec_in_groups(note.dept,con.CONFIG['r'],False)
     TO = []
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
             note.sent_to += f",{st}" if note.sent_to else st
-            TO.append(RECIPIENTS[st]['email'])
+            TO.append(con.CONFIG['r'][st]['email'])
     if TO:
-        write_eml(",".join(TO),note,path_download)
-    return True
+        return write_eml(",".join(TO),note,con.CONFIG['folders']['local_folder'])
+    return False
 
-def new_mail_asr(note,path_download):
-    if not st.lower() in note.sent_to.lower():
+def new_mail_asr(note):
+    rst = True
+    if not 'asr' in note.sent_to.lower():
         for file in note.files:
-            con.nas.copy(file.file_id,f"/team-folders/Mail asr/Mail to asr")
-        note.sent_to += f",{st}" if note.sent_to else st
-    return True
+            if not file.copy(con.CONFIG['mail_out']['asr']):
+                rst = False
+        if rst:
+            note.sent_to += f",asr" if note.sent_to else 'asr'
+            return True
 
-def new_mail_asr_download(note,path_download):
+    return False
+
+def new_mail_asr_download(note):
     if not 'asr' in note.sent_to:
         for file in note.files:
-            con.nas.download_file(file.file_id,f"{path_download}/outbox asr",file.name)
+            con.nas.download_file(file.file_id,f"{CONFIG['folders']['local_folder']}/outbox asr",file.name)
         note.sent_to += f",asr" if note.sent_to else 'asr'
     return True
 
-def register_notes(path_despacho,path_archive,RECIPIENTS,is_from_dr = False,path_download = None):
-    register_dest = path_despacho if is_from_dr else f"{path_despacho}/Outbox Despacho"
+def register_notes(is_from_dr = False):
+    register_dest = con.CONFIG['folders']['to_send'] if is_from_dr else f"{con.CONFIG['folders']['despacho']}/Outbox Despacho"
     flow = 'out' if is_from_dr else 'in'
     notes = read_register_file(register_dest,flow)
     
     if not notes: return None
-
-    for note in notes.values():
-        if not note.archived and note.dept != '':
-            if is_from_dr:
-                dest = f"{path_archive}/{note.archive_folder}"
-            else:
-                dest = f"{path_archive}/{note.archive_folder}"
-            
-            con.nas.move(note.synology_id,dest)
-            note.archived = True
-
-            if len(note.files) == 1:
-                if note.files[0].original_id:
-                    con.nas.move(note.files[0].original_id,dest)
-            
-        if note.archived and note.dept != '':
-            if is_from_dr:
-                if note.no < 250:
-                    rst = new_mail_eml(RECIPIENTS,note,path_download)
-                elif note.no < 1000:
-                    rst = new_mail_asr(note,path_download)
-                elif note.no < 2000:
-                    rst = new_mail_ctr(RECIPIENTS,note)
+    
+    try:
+        for note in notes.values():
+            # Moving note to archive if needed
+            if not note.archived and note.dept != '':
+                if is_from_dr:
+                    dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
                 else:
-                    rst = new_mail_eml(RECIPIENTS,note,path_download)
-            else:
-                depts = [dep.lower().strip() for dep in note.dept.split(',')]
-                for dep in depts:
-                    if not dep.lower() in note.sent_to.lower():
-                        rst = con.nas.send_message(dep,RECIPIENTS,note.message)
-                        if rst: note.sent_to += f",{dep}" if note.sent_to else dep
+                    dest = f"{con.CONFIG['folders']['archive']}/{note.archive_folder}"
+                
+                if note.move(dest,register_dest):
+                    note.archived = True
 
+            # Sending copy/message of note to recipient
+            if note.archived and note.dept != '':
+                if is_from_dr: # Is mail out
+                    if note.no < 250: #cg
+                        rst = new_mail_eml(note)
+                    elif note.no < 1000: #asr
+                        rst = new_mail_asr(note)
+                    elif note.no < 2000: #ctr
+                        rst = new_mail_ctr(note)
+                    else: #r
+                        rst = new_mail_eml(note)
+                else: # Is mail in to one/several dr
+                    depts = [dep.lower().strip() for dep in note.dept.split(',')]
+                    for dep in depts:
+                        if not dep.lower() in note.sent_to.lower():
+                            rst = con.nas.send_message(dep,con.CONFIG['deps'],note.message)
+                            if rst: 
+                                note.sent_to += f",{dep}" if note.sent_to else dep
+    
+    except Exception as err:
+        logging.error(err)
+        logging.error("There was some error registering the notes")
+        
     generate_register(register_dest,notes)

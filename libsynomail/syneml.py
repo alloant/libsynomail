@@ -21,6 +21,7 @@ def write_eml(rec,note,path_download):
     body = ""
     msg.attach(MIMEText(body,"plain"))
 
+    rst = True
     for file in note.files:
         ext = Path(file.name).suffix[1:]
         file_name = f"{Path(file.name).stem}.{INV_EXT[ext]}" if ext in INV_EXT else file.name
@@ -32,10 +33,15 @@ def write_eml(rec,note,path_download):
 
             part['Content-Disposition'] = f'attachment; filename = {file_name}'
             msg.attach(part)
+        else:
+            rst = False
 
-    with open(f"{path_download}/outbox forti/{note.key}.eml",'w') as file:
-        emlGenerator = generator.Generator(file)
-        emlGenerator.flatten(msg)
+    if rst:
+        with open(f"{path_download}/outbox forti/{note.key}.eml",'w') as file:
+            emlGenerator = generator.Generator(file)
+            emlGenerator.flatten(msg)
+            return True
+    return False
 
 
 def read_eml(path_eml):
