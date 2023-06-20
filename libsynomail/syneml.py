@@ -52,9 +52,10 @@ def read_eml(path_eml):
     else:
         dest = "/team-folders/Mail r/Mail from r"
 
-    attachments = parsed_eml['attachment']
+    if 'attachment' in parsed_eml:
+        attachments = parsed_eml['attachment']
     
-    for file in attachments:
-        b_file = io.BytesIO(base64.b64decode(file['raw']))
-        b_file.name = file['filename']
-        con.nas.upload_file(b_file,dest)
+        for file in attachments:
+            b_file = io.BytesIO(base64.b64decode(file['raw']))
+            b_file.name = file['filename']
+            con.nas.upload_file(b_file,dest)

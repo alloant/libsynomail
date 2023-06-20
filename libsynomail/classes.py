@@ -52,14 +52,14 @@ class File(AttrDict):
         if rst:
             if self.original_name:
                 #con.nas.move(f"{self.path}/{self.original_name}",dest)
-                con.nas.move(self.original_id,dest)
+                con.nas.move(self.original_id,f"{con.CONFIG['folders']['despacho']}/Inbox Despacho/ORIGINALS")
             self.path = dest
         
         return rst
 
     def copy(self,dest):
-        #return con.nas.copy(self.display_path,dest)
-        return con.nas.copy(self.file_id,dest)
+        return con.nas.copy(self.display_path,dest)
+        #return con.nas.copy(self.file_id,dest,self.name)
 
     def convert(self):
         self.original_name = self.name

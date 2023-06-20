@@ -75,10 +75,10 @@ def notes_from_files(files,flow = 'in'):
             
             notes[note.key].addFile(file['file'])
         else:
-            file.move(f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
+            file['file'].move(f"{con.CONFIG['folders']['despacho']}/Inbox Despacho")
             ext = Path(file['file']['name']).suffix[1:]
             if ext in EXT:
-                file.convert()
+                file['file'].convert()
 
     return notes
 
@@ -270,6 +270,7 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
 
 def new_mail_ctr(note):
     send_to = rec_in_groups(note.dept,con.CONFIG['ctrs'],True)
+    print(send_to)
     rst = True 
     for st in send_to:
         if not st.lower() in note.sent_to.lower():

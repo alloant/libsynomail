@@ -77,10 +77,14 @@ class prome:
             logging.warning(f'Cannot move the file {path} to {new_path}')
             return False,''
 
-    def copy(self,path,dest):
+    def copy(self,path,dest,name = None):
         try:
             with SynologyDrive(self.user,self.PASS,"nas.prome.sg",dsm_version='7') as synd:
-                ext = Path(path).suffix[1:]
+                if name:
+                    ext = Path(name).suffix[1:]
+                else:
+                    ext = Path(path).suffix[1:]
+
                 if ext in INV_EXT:
                     synd.copy(path,dest)
                 else:
@@ -167,7 +171,7 @@ class prome:
                 ret_upload = synd.upload_file(file, dest_folder_path=dest)
         except Exception as err:
             logging.error(err)
-            logging.error("Cannot upload {file.name}")
+            logging.error(f"Cannot upload {file.name}")
 
 
     def upload_convert_wb(self,wb,name,dest):
