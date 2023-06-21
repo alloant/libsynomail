@@ -210,9 +210,9 @@ class Note(AttrDict):
     def move(self,dest,new_path = None):
         if self.folder_path:
             if new_path:
-                self.folder_path = f"{self.path}/{self.folder_path.split('/')[-1]}"
-            #rst,self.folder_id = con.nas.move(self.folder_path,dest)
-            rst,self.folder_id = con.nas.move(self.folder_id,dest)
+                or_path = f"{new_path}/{self.folder_path}"
+                #rst,self.folder_id = con.nas.move(self.folder_path,dest)
+                rst,self.folder_id = con.nas.move(or_path,dest)
             return rst
         else:
             if self.files:

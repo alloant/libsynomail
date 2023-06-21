@@ -368,6 +368,7 @@ def register_notes(is_from_dr = False):
                                 note.sent_to += f",{dep}" if note.sent_to else dep
     
     except Exception as err:
+        raise
         logging.error(err)
         logging.error("There was some error registering the notes")
         
