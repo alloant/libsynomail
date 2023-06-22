@@ -1,9 +1,10 @@
 from pathlib import Path
 from attrdict import AttrDict
-from libsynomail import INV_EXT
 from datetime import datetime
 
-import libsynomail.connection as con
+from libsynomail.nas import get_info,rename_path, move_path, copy_path, convert_office, download_path, create_folder
+from libsynomail import INV_EXT, EXT
+
 
 class File(AttrDict):
     def __init__(self,data,original_name = '',original_id = ''):
@@ -44,40 +45,37 @@ class File(AttrDict):
     def exportExcel(self):
         return [self.name,self.type,self.display_path,self.file_id,self.permanent_link,self.original_name,self.original_id]
 
-    def move(self,dest,new_path = None):
-        if new_path: self.path = new_path
-
-        #rst,self.file_id = con.nas.move(self.display_path,dest)
-        rst,self.file_id = con.nas.move(self.file_id,dest)
+    def move(self,dest,dest_original = None):
+        rst = move_path(self.file_id,dest)
         if rst:
-            if self.original_name:
-                #con.nas.move(f"{self.path}/{self.original_name}",dest)
-                con.nas.move(self.original_id,f"{con.CONFIG['folders']['despacho']}/Inbox Despacho/ORIGINALS")
+            if self.original_name and dest_original:
+                move_path(self.original_id,dest_original)
             self.path = dest
+            self.file_id = rst['id']
         
         return rst
 
     def copy(self,dest):
-        return con.nas.copy(self.display_path,dest)
-        #return con.nas.copy(self.file_id,dest,self.name)
+        return copy_path(self.file_id,f"{dest}/{self.name}")
 
     def convert(self):
         self.original_name = self.name
         self.original_id = self.file_id
-        #name,path,fid,p_link = con.nas.convert_office(self.display_path)
-        name,path,fid,p_link = con.nas.convert_office(self.file_id)
-        self.name = name
-        self.file_id = fid
-        self.permanent_link = p_link
+        
+        rst = convert_office(self.file_id)
+        
+        self.name = rst['name']
+        self.file_id = rst['id']
+        self.permanent_link = rst['permanent_link']
 
     def rename(self,new_name):
-        #con.nas.change_name(self.display_path,new_name)
-        con.nas.change_name(self.file_id,new_name)
-        self.name = new_name
+        rst = rename_path(self.file_id,new_name)
+
+        if rst: self.name = new_name
 
     def download(self,dest = None):
-        #return con.nas.download_file(self.display_path,dest)
-        return con.nas.download_file(self.file_id,dest)
+        return download_path(self.file_id,dest)
+
 
 class Note(AttrDict):
     def __init__(self,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
@@ -98,6 +96,18 @@ class Note(AttrDict):
         self.sent_to = ''
         self.flow = flow
    
+        #if self.flow == 'out' and self.dept == '' and self.content == '':
+        #    note.dept,note.content = register.scrap_destination(note.no)
+
+    def __str__(self):
+         return self.key
+
+    def __eq__(self,other):
+        if isinstance(other,Note):
+            if self.key == other.key:
+                return True
+
+        return False
 
     @property
     def no(self):
@@ -107,30 +117,33 @@ class Note(AttrDict):
     def no(self,value):
         self._no = value
 
-    @property
-    def key(self):
+    def get_key(self,full = False):
         if self.flow == 'in':
-
             if self.type in ['r','ctr']:
                 key = f"{self.source}_"
             else:
                 key = f"{self.type}_"
-
-            key += f"{self.no}"
         else:
             tp = self.type_from_no
 
             if tp == 'cg':
-                key = f'Aes_{self.no}'
+                key = f'Aes_'
             elif tp == 'asr':
-                key = f"cr-asr_{self.no}"
+                key = f"cr-asr_"
             elif tp == 'ctr':
-                key = f"cr_{self.no}"
+                key = f"cr_"
             elif tp == 'r':
-                key = f"Aes-r_{self.no}"
+                key = f"Aes-r_"
+
+        if full:
+            key += f"0000{self.no}"[-4:]
+        else:
+            key += f"{self.no}"
         
         return key
     
+    key = property(get_key)
+
     @property
     def type_from_no(self):
         if self.flow == 'out':
@@ -145,10 +158,6 @@ class Note(AttrDict):
 
         return tp
 
-    @property
-    def synology_id(self):
-        return self.folder_id if self.folder_id else self.files[0].file_id
-    
     @property
     def archive_folder(self):
         if self.flow == 'in':
@@ -170,17 +179,12 @@ class Note(AttrDict):
 
         return message
 
-
-
     @property
     def of_annex(self):
         annex = len(self.files) - 1
 
         return annex if annex > 0 else ''
  
-    def __str__(self):
-         return self.key
-
     def addFile(self,file):
         self.files.append(file)
 
@@ -207,20 +211,76 @@ class Note(AttrDict):
     def exportExcel(self):
         return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
 
-    def move(self,dest,new_path = None):
+    def move(self,dest):
         if self.folder_path:
-            if new_path:
-                or_path = f"{new_path}/{self.folder_path}"
-                #rst,self.folder_id = con.nas.move(self.folder_path,dest)
-                rst,self.folder_id = con.nas.move(or_path,dest)
-            return rst
+            rst = move_path(self.folder_path,dest)
+            if rst: 
+                self.folder_path = f"{dest}/{Path(self.folder_path).stem}"
+                self.folder_id = rst['id']
+                return True
         else:
-            if self.files:
-                return self.files[0].move(dest,new_path=new_path)
+            cont = 0
+            for file in self.files:
+                cont += 1 if file.move(dest) else 0
+            
+            if cont == len(self.files):
+                return True
+            else:
+                return False
 
-    def create_folder(self,dest):
-        self.folder_id,self.permanent_link = con.nas.create_folder(dest,main_name)
-        dest += f"/{main_name}"
-        self.folder_path = dest
+    def copy(self,dest):
+        if self.folder_path:
+            rst = copy_path(self.folder_path,f"{dest}/{Path(self.folder_path).stem}")
+            if rst:
+                return True
+        else:
+            cont = 0
+            for file in self.files:
+                cont += 1 if file.copy(dest) else 0
+            
+            if cont == len(self.files):
+                return True
+            else:
+                return False
+
+
+    def organice_files_to_despacho(self,path_dest,path_originals):
+        #Change names of files
+        for i,file in enumerate(self.files):
+            if i == 0:
+                old_name = Path(file.name).stem
+                key = self.get_key(full=True)
+                if self.source == 'r': key = f"r_{key}"
+                new_name = f"{key}.{file.ext}"
+            else:
+                new_name = f"{file.name.replace(old_name,key)}".strip().replace('&','and')
+
+            file.rename(new_name)
+        
+        # Moving files to inbox folder
+        dest =f"{path_dest}"
+
+        #Create a folder if needed
+        if self.of_annex != '':
+            rst = create_folder(dest,key)
+            if not rst: return None
+            dest = f"{dest}/{key}"
+            self.folder_id = rst['id']
+            self.folder_path = dest
+            self.permanent_link = rst['permanent_link']
+        
+        # Convert the files to Synology office
+        for file in self.files:
+            if file.ext in EXT:
+                file.convert()
+
+        # Move the files to dest
+        for file in self.files:
+            file.move(dest,path_originals)
+
+        
+
+
+
 
 

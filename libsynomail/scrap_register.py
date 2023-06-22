@@ -2,12 +2,18 @@
 import logging
 from attrdict import AttrDict
 
-import libsynomail.connection as con
 from openpyxl import load_workbook
 
+from libsynomail.nas import download_path
+
 class Register(AttrDict):
-    def __init__(self,flow):
-        self.wb = load_workbook(con.nas.download_file(f"{con.CONFIG['folders']['archive']}/Mail {flow} Registry.osheet"))
+    def __init__(self,flow,path_archive):
+        file = download_path(f"{path_archive}/Mail {flow} Registry.osheet")
+        if not file:
+            logging.error("Cannot read Mail out Registry")
+            return None
+
+        self.wb = load_workbook(file)
         self.cg = list(self.wb[f'cg {flow} (1-249)'].iter_rows(values_only=True))
         self.asr = list(self.wb[f'asr {flow} (250-999)'].iter_rows(values_only=True))
         self.ctr = list(self.wb[f'ctr {flow} (from 1000 to 1999)'].iter_rows(values_only=True))
