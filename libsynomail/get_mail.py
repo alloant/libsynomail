@@ -144,12 +144,15 @@ def new_mail_ctr(note):
 def new_mail_eml(note):
     send_to = rec_in_groups(note.dept,CONFIG['r'],False)
     TO = []
+    recipients = ""
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
-            note.sent_to += f",{st}" if note.sent_to else st
+            recipients += f",{st}" if recipients else st
             TO.append(CONFIG['r'][st]['email'])
     if TO:
-        return write_eml(",".join(TO),note,CONFIG['folders']['local_folder'])
+        if write_eml(",".join(TO),note,CONFIG['folders']['local_folder']):
+            note.sent_to += f",{recipients}" if note.sent_to else recipients
+            return True
     return False
 
 def new_mail_asr(note):
@@ -203,7 +206,6 @@ def register_notes(is_from_dr = False):
                                 note.sent_to += f",{dep}" if note.sent_to else dep
     
     except Exception as err:
-        raise
         logging.error(err)
         logging.error("There was some error registering the notes")
         

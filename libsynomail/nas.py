@@ -22,7 +22,6 @@ def wrap_error(func, *args):
             return func(synd,*args)
         return None
     except Exception as err:
-        raise
         logging.error(err)
         #logging.warning(f'Cannot get files from {path}')
 
