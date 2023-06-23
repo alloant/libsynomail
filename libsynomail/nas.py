@@ -23,6 +23,7 @@ def wrap_error(func, *args):
         return None
     except Exception as err:
         logging.error(err)
+        #logging.error(args)
         #logging.warning(f'Cannot get files from {path}')
 
 
@@ -103,10 +104,11 @@ def _move_path(synd,path,new_path):
 
 def _copy_path(synd,path,dest):
     #if path.isdigit(): path = f"id:{path}"
-    if Path(dest).suffix[1:] in INV_EXT:
-        return synd.copy(path,dest)
-    else:
-        return synd.copy_drive(path,dest)
+    #if Path(dest).suffix[1:] in INV_EXT:
+    #    return synd.copy(path,dest)
+    #else:
+    #    return synd.copy_drive(path,dest)
+    return synd.copy(path,dest)
 
 
 def _convert_office(synd,path,delete):

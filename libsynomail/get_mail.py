@@ -110,18 +110,22 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
             if rec.lower() == rec:
                 in_groups.append(rec)
             else:
-                ex_groups.append(rec)
+                ex_groups.append(rec.lower())
 
     for key,rec in RECIPIENTS.items():
         putin = True
         for gp in ex_groups:
-            if not gp.lower() in rec['groups']:
+            if not gp in rec['groups']:
                 putin = False
                 break
 
         if putin:
-            for gp in in_groups:
-                if gp in rec['groups']:
+            if in_groups:
+                for gp in in_groups:
+                    if gp in rec['groups']:
+                        send_to.append(key)
+            else:
+                if ex_groups:
                     send_to.append(key)
 
 
@@ -185,6 +189,7 @@ def register_notes(is_from_dr = False):
                 
                 if note.move(dest):
                     note.archived = True
+                    logging.info(f"Note {note.key} was archived")
 
             # Sending copy/message of note to recipient
             if note.archived and note.dept != '':
@@ -197,14 +202,16 @@ def register_notes(is_from_dr = False):
                         rst = new_mail_ctr(note)
                     else: #r
                         rst = new_mail_eml(note)
+
+                    if rst: logging.info(f"Note {note.key} was copied/converted eml")
                 else: # Is mail in to one/several dr
                     depts = [dep.lower().strip() for dep in note.dept.split(',')]
                     for dep in depts:
                         if not dep.lower() in note.sent_to.lower():
                             rst = send_message(dep,CONFIG['deps'],note.message)
-                            if rst: 
+                            if rst:
                                 note.sent_to += f",{dep}" if note.sent_to else dep
-    
+                                logging.info(f"Message to {dep} about {note.key} was sent")
     except Exception as err:
         logging.error(err)
         logging.error("There was some error registering the notes")

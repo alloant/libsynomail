@@ -2,6 +2,8 @@ from pathlib import Path
 from attrdict import AttrDict
 from datetime import datetime
 
+import logging
+
 from libsynomail.nas import get_info,rename_path, move_path, copy_path, convert_office, download_path, create_folder
 from libsynomail import INV_EXT, EXT
 
@@ -87,7 +89,7 @@ class Note(AttrDict):
         self.content = content
         self.dept = dept
         self.comments = comments
-        self.year = year if year else datetime.today().strftime('%Y')
+        self.year = str(year) if year else str(datetime.today().strftime('%Y'))
         self.files = []
         self.permanent_link = ''
         self.folder_id = ''
@@ -196,11 +198,11 @@ class Note(AttrDict):
 
     def messageLink(self):
         if self.type == 'cg':
-            text = f"{self.no}/{self.year[2:]}"
+            text = f"{self.no}/{str(self.year)[2:]}"
         elif self.type == 'asr':
-            text = f"asr {self.no}/{self.year[2:]}"
+            text = f"asr {self.no}/{str(self.year)[2:]}"
         else:
-            text = f"{self.source} {self.no}/{self.year[2:]}"
+            text = f"{self.source} {self.no}/{str(self.year)[2:]}"
         
         if self.permanent_link:
             return f'<https://nas.prome.sg:5001/d/f/{self.permanent_link}|{text}>'
@@ -212,8 +214,9 @@ class Note(AttrDict):
         return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
 
     def move(self,dest):
-        if self.folder_path:
-            rst = move_path(self.folder_path,dest)
+        logging.info(f"Moving {self.key} to {dest}")
+        if self.folder_id:
+            rst = move_path(self.folder_id,dest)
             if rst: 
                 self.folder_path = f"{dest}/{Path(self.folder_path).stem}"
                 self.folder_id = rst['id']
@@ -229,6 +232,7 @@ class Note(AttrDict):
                 return False
 
     def copy(self,dest):
+        logging.info(f"Copying {self.key} to {dest}")
         if self.folder_path:
             rst = copy_path(self.folder_path,f"{dest}/{Path(self.folder_path).stem}")
             if rst:
