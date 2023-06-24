@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 from libsynomail import EXT,INV_EXT
-
+from libsynomail.nas import upload_path
 #import libsynomail.connection as con
 
 def write_eml(rec,note,path_download):
@@ -58,4 +58,4 @@ def read_eml(path_eml):
         for file in attachments:
             b_file = io.BytesIO(base64.b64decode(file['raw']))
             b_file.name = file['filename']
-            #con.nas.upload_file(b_file,dest)
+            upload_path(b_file,dest)

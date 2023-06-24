@@ -23,8 +23,8 @@ def wrap_error(func, *args):
         return None
     except Exception as err:
         logging.error(err)
-        #logging.error(args)
-        #logging.warning(f'Cannot get files from {path}')
+        logging.error(func.__name__)
+        logging.error(args)
 
 
 # Wrapped functions

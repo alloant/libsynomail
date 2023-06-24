@@ -36,7 +36,7 @@ def get_notes_in_folders(folders,ctrs):
 
         for file in files_in_folder:
             logging.info(f"Found in {path[0]} {path[1]}: {file['name']}")
-            source = path[1] if path[0] != 'r' else file['name']
+            source = path[1] if path[0] != 'r' else f"r_{file['name']}"
             files.append({"type": path[0],"source": path[1],"file": File(file)})
     
     
