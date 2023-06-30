@@ -194,7 +194,10 @@ class Note(AttrDict):
         if self.permanent_link:
             return f'=HYPERLINK("#dlink=/d/f/{self.permanent_link}", "{text}")'
         else:
-            return self.files[0].getLinkSheet(text)
+            if self.files:
+                return self.files[0].getLinkSheet(text)
+            else:
+                return ''
 
     def messageLink(self):
         if self.type == 'cg':

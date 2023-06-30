@@ -44,18 +44,26 @@ def write_eml(rec,note,path_download):
     return False
 
 
-def read_eml(path_eml):
+def read_eml(path_eml,emails = None):
     parsed_eml = eml_parser.parser.decode_email(path_eml,include_attachment_data=True)
     sender = parsed_eml['header']['from']
     if sender == "cg@cardumen.org":
         dest = "/team-folders/Mail cg/Mail from cg"
+        bf = 'cg'
     else:
         dest = "/team-folders/Mail r/Mail from r"
+        bf = 'r'
+
+    if bf == 'r':
+        for r,email in emails.items():
+            if sender.lower() == email['email'].lower():
+                bf += f"_{r}"
+                break
 
     if 'attachment' in parsed_eml:
         attachments = parsed_eml['attachment']
     
         for file in attachments:
             b_file = io.BytesIO(base64.b64decode(file['raw']))
-            b_file.name = file['filename']
+            b_file.name = f"{bf}_{file['filename']}"
             upload_path(b_file,dest)

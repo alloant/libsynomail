@@ -97,6 +97,9 @@ def upload_register(wb,name,dest,browser = None):
 
 def read_register(path_despacho,flow = 'in'):
     files_in_outbox = files_path(f"{path_despacho}")
+    
+    if not files_in_outbox: return False
+
     files_in_outbox.sort(reverse = True,key = lambda file: file['name'])
     notes = ''
     for file in files_in_outbox:
@@ -108,6 +111,9 @@ def read_register(path_despacho,flow = 'in'):
 
 def join_registers(path,flow = 'in'):
     files_in_outbox = files_path(f"{path}")
+    
+    if not files_in_outbox: return False
+
     files_in_outbox.sort(key = lambda file: file['name'])
     notes = {}
     for file in files_in_outbox:
@@ -119,7 +125,11 @@ def join_registers(path,flow = 'in'):
     write_register(path,notes)
             
 def register_to_notes(register,flow = 'in'):
-    wb = load_workbook(download_path(register))
+    dow_register = download_path(register)
+    if dow_register:
+        wb = load_workbook(dow_register)
+    else:
+        return False
 
     notes_data = list(wb['Notes'].iter_rows(values_only=True))[1:]
     data = list(wb['Data'].iter_rows(values_only=True))[1:]

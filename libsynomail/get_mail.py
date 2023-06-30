@@ -36,8 +36,14 @@ def get_notes_in_folders(folders,ctrs):
 
         for file in files_in_folder:
             logging.info(f"Found in {path[0]} {path[1]}: {file['name']}")
-            source = path[1] if path[0] != 'r' else f"r_{file['name']}"
-            files.append({"type": path[0],"source": path[1],"file": File(file)})
+            if path[0] == 'r':
+                if 'r_' in file['name']:
+                    source = file['name'].split("_")[1]
+                else:
+                    source = file['name']
+            else:
+                source = path[1]
+            files.append({"type": path[0],"source": source,"file": File(file)})
     
     
     return files
@@ -70,22 +76,24 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
     
     if is_from_dr: #We only need this for the dr to know where they are sending the note
         register = Register('out',CONFIG['folders']['archive'])
-        
+    
+    path_notes = f"{path_files}/ToSend" if is_from_dr else f"{path_files}/Notes"
+    path_register = f"{path_files}/ToSend" if is_from_dr else f"{path_files}/Inbox Despacho"
+    
+
     try:
         for note in notes.values():
             for i,file in enumerate(note.files):
-                dest = f"{path_files}"
-                
                 # Getting information about the note from Mail out
                 if is_from_dr and register != None:
                     note.dept,note.content = register.scrap_destination(note.no)
-               
-            note.organice_files_to_despacho(path_files,CONFIG['folders']['originals'])
+            
+            note.organice_files_to_despacho(f"{path_notes}",CONFIG['folders']['originals'])
     except Exception as err:
         logging.error(err)
         logging.error("There was some error managing the notes")
 
-    write_register(f"{path_files}",notes,CONFIG['BROWSER'])
+    write_register(f"{path_register}",notes,CONFIG['BROWSER'])
     
     return notes
 
@@ -128,22 +136,24 @@ def rec_in_groups(recipients,RECIPIENTS,ctr = True):
                 if ex_groups:
                     send_to.append(key)
 
-
     return list(set(send_to))
 
 def new_mail_ctr(note):
     send_to = rec_in_groups(note.dept,CONFIG['ctrs'],True)
-    rst = True 
+    rst = True
+    cont = 0
     for st in send_to:
         if not st.lower() in note.sent_to.lower():
             rst = note.copy(CONFIG['mail_out']['ctr'].replace('@',st))
             
             if rst:
                 note.sent_to += f",{st}" if note.sent_to else st
-                return True
-            
+                cont += 1
     
-    return False
+    if cont == len(send_to):
+        return True
+    else:
+        return False
 
 def new_mail_eml(note):
     send_to = rec_in_groups(note.dept,CONFIG['r'],False)
