@@ -35,7 +35,7 @@ def write_register(path,notes,browser = None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Notes"
-    ws.append(['Type','Source','No','Year','Ref','Date','Content','Dept','of_annex','Comments','Archived','Sent to'])
+    ws.append(['Register','Type','Source','No','Year','Ref','Date','Content','Dept','of_annex','Comments','Archived','Sent to'])
     for cell in ws[ws.max_row]:
         cell.alignment = Alignment(horizontal='center')
         cell.font = FONT_BOLD
@@ -60,7 +60,7 @@ def write_register(path,notes,browser = None):
         for file in note.files:
             ws_files.append([key] + file.exportExcel())
 
-    column_widths = [10,10,10,12,12,15,50,20,12,50,10,20]
+    column_widths = [10,10,10,10,12,12,15,50,20,12,50,10,20]
     for i, column_width in enumerate(column_widths,1):  # ,1 to start at 1
         ws.column_dimensions[get_column_letter(i)].width = column_width
     
@@ -94,6 +94,11 @@ def upload_register(wb,name,dest,browser = None):
         except Exception as err:
             logging.error(err)
             logging.warning("Cannot convert register to Synology Office")
+    else:
+        logging.error(err)
+        logging.error("Cannot upload register")
+        wb.save(file.name)
+
 
 def read_register(path_despacho,flow = 'in'):
     files_in_outbox = files_path(f"{path_despacho}")
@@ -139,16 +144,16 @@ def register_to_notes(register,flow = 'in'):
     
     for i,row in enumerate(notes_data):
         if row[0] == None: continue
-        no = row[2].replace(' ','').split('","')[1][:-2]
-        note = Note(row[0],row[1],no,flow=flow)
-        note.year = row[3] if row[3] else ''
-        note.ref = row[4] if row[4] else ''
-        note.date = row[5] if row[5] else '' 
-        note.content = row[6] if row[6] else ''
-        note.dept = row[7] if row[7] else '' 
-        note.comments = row[9] if row[9] else ''
-        note.archived = row[10] if row[10] else ''
-        note.sent_to = row[11] if row[11] else ''
+        no = row[3].replace(' ','').split('","')[1][:-2]
+        note = Note(row[0],row[1],row[2],no,flow=flow)
+        note.year = row[4] if row[4] else ''
+        note.ref = row[5] if row[5] else ''
+        note.date = row[6] if row[6] else '' 
+        note.content = row[7] if row[7] else ''
+        note.dept = row[8] if row[8] else '' 
+        note.comments = row[10] if row[10] else ''
+        note.archived = row[11] if row[11] else ''
+        note.sent_to = row[12] if row[12] else ''
 
         note.folder_path = data[i][1]
         note.folder_id = data[i][2]

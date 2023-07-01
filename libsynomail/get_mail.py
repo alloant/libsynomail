@@ -43,7 +43,14 @@ def get_notes_in_folders(folders,ctrs):
                     source = file['name']
             else:
                 source = path[1]
-            files.append({"type": path[0],"source": source,"file": File(file)})
+            
+            register = "cr"
+            for reg,item in CONFIG['registers'].items():
+                if source in item['source'] and item['pattern'] in file['name']:
+                    register = reg
+                    break
+
+            files.append({"register":register,"type": path[0],"source": source,"file": File(file)})
     
     
     return files
@@ -54,8 +61,8 @@ def notes_from_files(files,flow = 'in'):
     files.sort(reverse=True,key = lambda file: f"{file['main']}_{file['file']}")
 
     for file in files:
-        if file['num'] != "":
-            note = Note(file['type'],file['source'],file['num'],flow)
+        if file['num'] != "":            
+            note = Note(file['register'],file['type'],file['source'],file['num'],flow)
             if not note.key in notes:
                 notes[note.key] = note
             
@@ -85,9 +92,11 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
         for note in notes.values():
             for i,file in enumerate(note.files):
                 # Getting information about the note from Mail out
-                if is_from_dr and register != None:
-                    note.dept,note.content = register.scrap_destination(note.no)
-            
+                if is_from_dr:
+                    if note.register == 'cr' and register != None:
+                        note.dept,note.content = register.scrap_destination(note.no)
+                    elif note.register in CONFIG['registers']:
+                        note.dept = CONFIG['registers']['dest']
             note.organice_files_to_despacho(f"{path_notes}",CONFIG['folders']['originals'])
     except Exception as err:
         logging.error(err)

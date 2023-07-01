@@ -80,7 +80,8 @@ class File(AttrDict):
 
 
 class Note(AttrDict):
-    def __init__(self,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
+    def __init__(self,reg,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
+        self.register = reg
         self.type = tp
         self.source = source
         self._no = no
@@ -214,7 +215,7 @@ class Note(AttrDict):
 
 
     def exportExcel(self):
-        return [self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
+        return [self.register,self.type,self.source,self.sheetLink(self.no),self.year,self.ref,self.date,self.content,self.dept,self.of_annex,self.comments,self.archived,self.sent_to]
 
     def move(self,dest):
         logging.info(f"Moving {self.key} to {dest}")
@@ -253,16 +254,17 @@ class Note(AttrDict):
 
     def organice_files_to_despacho(self,path_dest,path_originals):
         #Change names of files
-        for i,file in enumerate(self.files):
-            if i == 0:
-                old_name = Path(file.name).stem
-                key = self.get_key(full=True)
-                if self.source == 'r': key = f"r_{key}"
-                new_name = f"{key}.{file.ext}"
-            else:
-                new_name = f"{file.name.replace(old_name,key)}".strip().replace('&','and')
+        if self.register == 'cr':
+            for i,file in enumerate(self.files):
+                if i == 0:
+                    old_name = Path(file.name).stem
+                    key = self.get_key(full=True)
+                    if self.source == 'r': key = f"r_{key}"
+                    new_name = f"{key}.{file.ext}"
+                else:
+                    new_name = f"{file.name.replace(old_name,key)}".strip().replace('&','and')
 
-            file.rename(new_name)
+                file.rename(new_name)
         
         # Moving files to inbox folder
         dest =f"{path_dest}"
