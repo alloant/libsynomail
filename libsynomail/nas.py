@@ -22,7 +22,6 @@ def wrap_error(func, *args):
             return func(synd,*args)
         return None
     except Exception as err:
-        raise
         logging.error(err)
         logging.error(func.__name__)
         logging.error(args)
