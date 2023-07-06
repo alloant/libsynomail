@@ -41,7 +41,7 @@ class Register(AttrDict):
             return reg[2],reg[4]
         else:
             if self.get_type(no) == 'cg':
-                return self.get_type(no),reg[6]
+                return self.get_type(no),reg[4]
             else:
                 return self.get_type(no),reg[3]
 

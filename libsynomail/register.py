@@ -49,7 +49,7 @@ def write_register(path,notes,browser = None):
     
     for key,note in notes.items():
         ws.append(note.exportExcel())
-        ws[ws.max_row][5].number_format = 'dd/mm/yyyy;@'
+        ws[ws.max_row][6].number_format = 'dd/mm/yyyy;@'
        
         ws_data.append([note.key,note.folder_path,note.folder_id,note.permanent_link])
 

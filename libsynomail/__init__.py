@@ -6,4 +6,4 @@ import os
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 INV_EXT = {'osheet':'xlsx','odoc':'docx'}
-EXT = {'xls':'osheet','xlsx':'osheet','docx':'odoc'}
+EXT = {'xls':'osheet','xlsx':'osheet','docx':'odoc','rtf':'odoc'}

@@ -205,13 +205,15 @@ def register_notes(is_from_dr = False):
                     dest = f"{CONFIG['folders']['archive']}/{note.archive_folder}"
                 else:
                     dest = f"{CONFIG['folders']['archive']}/{note.archive_folder}"
-                
-                if note.move(dest):
-                    note.archived = True
-                    logging.info(f"Note {note.key} was archived")
+
+
+                if note.register == 'cr':
+                    if note.move(dest):
+                        note.archived = True
+                        logging.info(f"Note {note.key} was archived")
 
             # Sending copy/message of note to recipient
-            if note.archived and note.dept != '':
+            if (note.archived or note.register != 'cr') and note.dept != '':
                 if is_from_dr: # Is mail out
                     if note.no < 250: #cg
                         rst = new_mail_eml(note)
