@@ -32,14 +32,18 @@ class Register(AttrDict):
         return tp
 
     def scrap_destination(self,no):
-        col = 1 if self.get_type(no) == 'cg' else 0
-
+        found = False
         for reg in self[self.get_type(no)]:
-            if reg[col] == no: break
-        
+            if reg[0] == no:
+                found = True
+                break
+
         if self.get_type(no) in ['ctr','r']:
+            if not found: return '',''
             return reg[2],reg[4]
         else:
+            if not found: return self.get_type(no),''
+            
             if self.get_type(no) == 'cg':
                 return self.get_type(no),reg[4]
             else:

@@ -22,6 +22,7 @@ def wrap_error(func, *args):
             return func(synd,*args)
         return None
     except Exception as err:
+        raise
         logging.error(err)
         logging.error(func.__name__)
         logging.error(args)
@@ -59,7 +60,8 @@ def create_folder(path:str,folder:str):
 def upload_register(wb,name,dest):
     return wrap_error(_upload_register,name,dest)
 
-
+def create_task(cal_id:str,summary:str):
+    return wrap_error(_create_task,cal_id,summary)
 
 # Original functions
 
@@ -191,3 +193,5 @@ def send_message(rec,RECIPIENTS,message):
         logging.error(f"Cannot send message to {rec}")
         return False
 
+def _create_task(synd,cal_id,summary):
+    synd.create_task(cal_id,summary)

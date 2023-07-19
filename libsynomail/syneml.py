@@ -18,6 +18,7 @@ def write_eml(rec,note,path_download):
     msg["To"] = rec
     msg["From"] = 'Aes-cr@cardumen.org'
     msg["Subject"] = f"{note.key}/{note.year[2:]}: {note.content}"
+    msg.add_header('X-Unsent','1')
     body = ""
     msg.attach(MIMEText(body,"plain"))
 
