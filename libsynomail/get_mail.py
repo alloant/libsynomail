@@ -10,7 +10,7 @@ from libsynomail.scrap_register import Register
 from libsynomail.syneml import write_eml
 
 from libsynomail.nas import files_path,send_message
-from libsynomail.register import write_register, read_register
+from libsynomail.register import write_register, read_register, join_registers
 
 
 def init_config(config):
@@ -61,8 +61,8 @@ def notes_from_files(files,flow = 'in'):
     files.sort(reverse=True,key = lambda file: f"{file['main']}_{file['file']}")
 
     for file in files:
-        if file['num'] != "":            
-            note = Note(file['register'],file['type'],file['source'],file['num'],flow)
+        if file['num'] != "": 
+            note = Note(file['register'],file['type'],file['source'],file['num'],flow,file['ref'])
             if not note.key in notes:
                 notes[note.key] = note
             
@@ -103,6 +103,7 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
         logging.error("There was some error managing the notes")
 
     write_register(f"{path_register}",notes,CONFIG['BROWSER'])
+    #join_registers(f"{path_register}",flow,notes,CONFIG['BROWSER'])
     
     return notes
 

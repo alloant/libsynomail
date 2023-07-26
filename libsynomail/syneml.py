@@ -48,9 +48,12 @@ def write_eml(rec,note,path_download):
 def read_eml(path_eml,emails = None):
     parsed_eml = eml_parser.parser.decode_email(path_eml,include_attachment_data=True)
     sender = parsed_eml['header']['from']
+    subject = parsed_eml['header']['subject']
     if sender == "cg@cardumen.org":
         dest = "/team-folders/Mail cg/Mail from cg"
         bf = 'cg'
+        if subject == 'Nota de envíos':
+            pass
     else:
         dest = "/team-folders/Mail r/Mail from r"
         bf = 'r'

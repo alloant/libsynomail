@@ -80,7 +80,7 @@ class File(AttrDict):
 
 
 class Note(AttrDict):
-    def __init__(self,reg,tp,source,no,flow='in',ref='',date=None,content='',dept='',comments='',year=None):
+    def __init__(self,reg,tp,source,no,flow='in',isref=0,ref='',date=None,content='',dept='',comments='',year=None):
         self.register = reg
         self.type = tp
         self.source = source
@@ -98,6 +98,7 @@ class Note(AttrDict):
         self.archived = ''
         self.sent_to = ''
         self.flow = flow
+        self.isref = isref
    
         #if self.flow == 'out' and self.dept == '' and self.content == '':
         #    note.dept,note.content = register.scrap_destination(note.no)
@@ -260,7 +261,7 @@ class Note(AttrDict):
                     old_name = Path(file.name).stem
                     key = self.get_key(full=True)
                     if self.source == 'r': key = f"r_{key}"
-                    new_name = f"{key}.{file.ext}"
+                    new_name = f"{key}.{file.ext}" if self.isref == 0 else f"{key}_ref.{file.ext}" 
                 else:
                     new_name = f"{file.name.replace(old_name,key)}".strip().replace('&','and')
 

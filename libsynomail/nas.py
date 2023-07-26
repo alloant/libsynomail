@@ -22,10 +22,12 @@ def wrap_error(func, *args):
             return func(synd,*args)
         return None
     except Exception as err:
-        raise
-        logging.error(err)
-        logging.error(func.__name__)
-        logging.error(args)
+        if type(err).__name__ == 'SynologyException':
+            message = f"Synology error: {err.message} in {func.__name__} with parameters {','.join(args)}"
+        else:
+            message = f"{err} in {func.__name__} with parameters {','.join(args)}"
+
+        logging.warning(message)
 
 
 # Wrapped functions

@@ -114,20 +114,20 @@ def read_register(path_despacho,flow = 'in'):
 
     return notes
 
-def join_registers(path,flow = 'in'):
+def join_registers(path,flow = 'in',memory_notes = {},browser = None):
     files_in_outbox = files_path(f"{path}")
     
     if not files_in_outbox: return False
 
     files_in_outbox.sort(key = lambda file: file['name'])
-    notes = {}
+    notes = memory_notes
     for file in files_in_outbox:
         if file['name'][:9] in ["register-"] and 'osheet' in file['name']:
             nts = register_to_notes(file['display_path'],flow)
 
             notes |= nts
 
-    write_register(path,notes)
+    write_register(path,notes,browser)
             
 def register_to_notes(register,flow = 'in'):
     dow_register = download_path(register)
