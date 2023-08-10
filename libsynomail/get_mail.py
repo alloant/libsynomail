@@ -96,7 +96,7 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
                     if note.register == 'cr' and register != None:
                         note.dept,note.content = register.scrap_destination(note.no)
                     elif note.register in CONFIG['registers']:
-                        note.dept = CONFIG['registers']['dest']
+                        note.dept = CONFIG['registers'][note.register]['dest']
             note.organice_files_to_despacho(f"{path_notes}",CONFIG['folders']['originals'])
     except Exception as err:
         logging.error(err)
@@ -109,8 +109,9 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
 
 
 def rec_in_groups(recipients,RECIPIENTS,ctr = True):
+    send_to = []
     if recipients == 'all':
-        for key,rec in RECIPIENTS:
+        for key in RECIPIENTS:
             send_to.append(key)
         
         return list(set(send_to))

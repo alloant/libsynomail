@@ -46,9 +46,10 @@ def write_eml(rec,note,path_download):
 
 
 def read_eml(path_eml,emails = None):
-    parsed_eml = eml_parser.parser.decode_email(path_eml,include_attachment_data=True)
+    parsed_eml = eml_parser.parser.decode_email(path_eml,include_attachment_data=True,include_raw_body=True)
     sender = parsed_eml['header']['from']
     subject = parsed_eml['header']['subject']
+
     if sender == "cg@cardumen.org":
         dest = "/team-folders/Mail cg/Mail from cg"
         bf = 'cg'
@@ -58,7 +59,7 @@ def read_eml(path_eml,emails = None):
         dest = "/team-folders/Mail r/Mail from r"
         bf = 'r'
 
-    if bf == 'r':
+    if bf == 'r' and emails:
         for r,email in emails.items():
             if sender.lower() == email['email'].lower():
                 bf += f"_{r}"
@@ -71,3 +72,10 @@ def read_eml(path_eml,emails = None):
             b_file = io.BytesIO(base64.b64decode(file['raw']))
             b_file.name = f"{bf}_{file['filename']}"
             upload_path(b_file,dest)
+    else:
+        if 'body' in parsed_eml:
+            if parsed_eml['body']:
+                if 'content' in parsed_eml['body'][0]:
+                    b_file = io.BytesIO(str.encode(parsed_eml['body'][0]['content']))
+                    b_file.name = f"{subject}"
+                    upload_path(b_file,dest)
