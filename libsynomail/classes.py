@@ -12,7 +12,8 @@ class File(AttrDict):
     def __init__(self,data,original_name = '',original_id = ''):
         self.name = data['name']
         self.type = data['type']
-        self.path = str(Path(data['display_path']).parent)
+        self.path = str(Path(data['display_path']).absolute().parent)
+        print('display_path:',data['display_path'],'self.path:',self.path)
         self.file_id = data['file_id']
         self.permanent_link = data['permanent_link']
         self.original_name = original_name

@@ -95,7 +95,6 @@ def upload_register(wb,name,dest,browser = None):
             logging.error(err)
             logging.warning("Cannot convert register to Synology Office")
     else:
-        logging.error(err)
         logging.error("Cannot upload register")
         wb.save(file.name)
 
