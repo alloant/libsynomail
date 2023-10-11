@@ -6,7 +6,7 @@ authors = ["Antonio Alonso <alloant@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<3.20"
 synochat = "^1.0.4"
 synology-drive-api = "^1.0.14"
 passlib = "^1.7.4"
