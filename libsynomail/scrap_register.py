@@ -39,15 +39,15 @@ class Register(AttrDict):
                 break
 
         if self.get_type(no) in ['ctr','r']:
-            if not found: return '',''
-            return reg[2],reg[4]
+            if not found: return '','',''
+            return reg[2],reg[4],reg[3]
         else:
-            if not found: return self.get_type(no),''
+            if not found: return self.get_type(no),'',''
             
             if self.get_type(no) == 'cg':
-                return self.get_type(no),reg[4]
+                return self.get_type(no),reg[4],reg[3]
             else:
-                return self.get_type(no),reg[3]
+                return self.get_type(no),reg[3],reg[2]
 
 
  

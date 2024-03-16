@@ -1,5 +1,5 @@
 #!/bin/python
-
+import re
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -62,7 +62,7 @@ def notes_from_files(files,flow = 'in'):
 
     for file in files:
         if file['num'] != "": 
-            note = Note(file['register'],file['type'],file['source'],file['num'],flow,file['ref'])
+            note = Note(file['register'],file['type'],file['source'],file['num'],flow,file['ref'],year=file['year'])
             if not note.key in notes:
                 notes[note.key] = note
             
@@ -94,7 +94,7 @@ def manage_files_despacho(path_files,files,is_from_dr = False):
                 # Getting information about the note from Mail out
                 if is_from_dr:
                     if note.register == 'cr' and register != None:
-                        note.dept,note.content = register.scrap_destination(note.no)
+                        note.dept,note.content,note.ref = register.scrap_destination(note.no)
                     elif note.register in CONFIG['registers']:
                         note.dept = CONFIG['registers'][note.register]['dest']
             note.organice_files_to_despacho(f"{path_notes}",CONFIG['folders']['originals'])
@@ -154,7 +154,7 @@ def new_mail_ctr(note):
     rst = True
     cont = 0
     for st in send_to:
-        if not st.lower() in note.sent_to.lower():
+        if not st.lower() in note.sent_to.lower().split(","):
             rst = note.copy(CONFIG['mail_out']['ctr'].replace('@',st))
             
             if rst:

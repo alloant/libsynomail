@@ -13,7 +13,6 @@ class File(AttrDict):
         self.name = data['name']
         self.type = data['type']
         self.path = str(Path(data['display_path']).absolute().parent)
-        print('display_path:',data['display_path'],'self.path:',self.path)
         self.file_id = data['file_id']
         self.permanent_link = data['permanent_link']
         self.original_name = original_name
@@ -59,6 +58,7 @@ class File(AttrDict):
         return rst
 
     def copy(self,dest):
+        return copy_path(f"{self.path}/{self.name}",f"{dest}/{self.name}")
         return copy_path(self.file_id,f"{dest}/{self.name}")
 
     def convert(self):
@@ -77,6 +77,7 @@ class File(AttrDict):
         if rst: self.name = new_name
 
     def download(self,dest = None):
+        return download_path(f"{self.path}/{self.name}",dest)
         return download_path(self.file_id,dest)
 
 
@@ -121,8 +122,39 @@ class Note(AttrDict):
     @no.setter
     def no(self,value):
         self._no = value
+    
+    def get_key_subject(self,full = False,r = False):
+        if self.flow == 'in':
+            if self.type in ['r','ctr']:
+                key = f"{self.source} "
+            else:
+                key = f"{self.type} "
+        else:
+            tp = self.type_from_no
 
-    def get_key(self,full = False):
+            if tp == 'cg':
+                key = f'Aes '
+            elif tp == 'asr':
+                key = f"cr-asr "
+            elif tp == 'ctr':
+                key = f"cr "
+            elif tp == 'r':
+                if r:
+                    if "," in self.dept:
+                        key = f"Aes-r "
+                    else:
+                        key = f"Aes-{self.dept}"
+                else:
+                    key = f"Aes-r "
+
+        if full:
+            key += f"0000{self.no}"[-4:]
+        else:
+            key += f"{self.no}"
+        
+        return key
+
+    def get_key(self,full = False,r = False):
         if self.flow == 'in':
             if self.type in ['r','ctr']:
                 key = f"{self.source}_"
@@ -138,7 +170,13 @@ class Note(AttrDict):
             elif tp == 'ctr':
                 key = f"cr_"
             elif tp == 'r':
-                key = f"Aes-r_"
+                if r:
+                    if "," in self.dept:
+                        key = f"Aes-r_"
+                    else:
+                        key = f"Aes-{self.dept}"
+                else:
+                    key = f"Aes-r_"
 
         if full:
             key += f"0000{self.no}"[-4:]
@@ -226,6 +264,8 @@ class Note(AttrDict):
             if rst: 
                 self.folder_path = f"{dest}/{Path(self.folder_path).stem}"
                 self.folder_id = rst['id']
+                for file in self.files:
+                    file.path = self.folder_path
                 return True
         else:
             cont = 0

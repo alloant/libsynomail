@@ -26,11 +26,13 @@ def wrap_error(func, *args):
             message = f"Synology error: {err.message} in {func.__name__} with parameters {args}"
         else:
             message = f"{err} in {func.__name__} with parameters {args}"
-
         logging.warning(message)
 
 
 # Wrapped functions
+
+def get_teams():
+    return wrap_error(_get_teams)
 
 def files_path(path:str):
     return wrap_error(_files_path,path)
@@ -66,6 +68,9 @@ def create_task(cal_id:str,summary:str):
     return wrap_error(_create_task,cal_id,summary)
 
 # Original functions
+
+def _get_teams(synd):
+    return list(synd.get_teamfolder_info().keys())
 
 def _files_path(synd,path):
     return synd.list_folder(path)['data']['items']

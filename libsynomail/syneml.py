@@ -16,8 +16,8 @@ from libsynomail.nas import upload_path
 def write_eml(rec,note,path_download):
     msg = MIMEMultipart()
     msg["To"] = rec
-    msg["From"] = 'Aes-cr@cardumen.org'
-    msg["Subject"] = f"{note.key}/{note.year[2:]}: {note.content}"
+    msg["From"] = 'Aes-cr@cardumen.net'
+    msg["Subject"] = f"{note.get_key_subject()}/{note.year[2:]}; {note.content}; {note.ref}"
     msg.add_header('X-Unsent','1')
     body = ""
     msg.attach(MIMEText(body,"plain"))
@@ -26,7 +26,7 @@ def write_eml(rec,note,path_download):
     for file in note.files:
         ext = Path(file.name).suffix[1:]
         file_name = f"{Path(file.name).stem}.{INV_EXT[ext]}" if ext in INV_EXT else file.name
-
+        
         attachment = file.download()
         
         if attachment:
@@ -50,7 +50,7 @@ def read_eml(path_eml,emails = None):
     sender = parsed_eml['header']['from']
     subject = parsed_eml['header']['subject']
 
-    if sender == "cg@cardumen.org":
+    if sender.split("@")[0] == "cg":
         dest = "/team-folders/Mail cg/Mail from cg"
         bf = 'cg'
         if subject == 'Nota de envíos':
